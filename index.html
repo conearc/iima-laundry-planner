@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IIMA Laundry Route Planner</title>
+<meta name="description" content="Students request laundry pickup; the laundry partner enters their team and gets the best collection route across IIMA's new campus.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top noprint">
+  <div class="brand">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path d="M5 7h14l-1.2 12.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 7Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 7V5.5A3 3 0 0 1 12 3a3 3 0 0 1 3 2.5V7" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+    </div>
+    <div>
+      <h1>IIMA Laundry Route Planner</h1>
+      <p class="sub">New campus · D19–D43 and MSH 1–19 · van parked near D42</p>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="student" class="active">1 · Request pickup</button>
+    <button role="tab" data-tab="partner">2 · Plan the round</button>
+    <button role="tab" data-tab="analysis">3 · Compare methods</button>
+    <button role="tab" data-tab="learn">4 · How the methods work</button>
+    <button role="tab" data-tab="walker">5 · Walker mode</button>
+    <button role="tab" data-tab="about">Assumptions</button>
+  </nav>
+</header>
+
+<main>
+<!-- ============================================================ STUDENT -->
+<section id="tab-student" class="tab active">
+  <div class="grid2">
+    <div class="card">
+      <h2>Request a pickup</h2>
+      <p class="muted">Tell the laundry partner how many clothes to collect and where. Requests close at 9:00 AM; the round starts after that.</p>
+      <form id="orderForm" autocomplete="off">
+        <label>Your name<input id="fName" required maxlength="40" placeholder="e.g. Aditi"></label>
+        <div class="row2">
+          <label>Dorm / MSH block<select id="fBuilding" required></select></label>
+          <label>Floor<select id="fFloor" required></select></label>
+        </div>
+        <div class="row2">
+          <label>Room / flat no.<input id="fRoom" required maxlength="10" placeholder="e.g. 214"></label>
+          <label>Number of clothes<input id="fPieces" type="number" min="1" max="40" value="12" required></label>
+        </div>
+        <button class="primary" type="submit">Book pickup</button>
+        <p id="formMsg" class="msg" role="status"></p>
+      </form>
+    </div>
+    <div class="card">
+      <div class="cardhead">
+        <h2>Today's requests</h2>
+        <span id="orderStats" class="pill"></span>
+      </div>
+      <div class="toolbar">
+        <label class="inline">Make
+          <input id="sampleN" type="number" min="1" max="100" value="40" style="width:76px">
+          sample requests</label>
+        <button id="btnSample">Generate</button>
+        <button id="btnClear" class="ghost">Clear all</button>
+      </div>
+      <p class="small">For demos: up to 100 requests from random rooms. A normal day for one laundry partner is about 60.</p>
+      <div class="tablewrap"><table id="orderTable" class="data">
+        <thead><tr><th>#</th><th>Name</th><th>Block</th><th>Floor</th><th>Room</th><th class="num">Clothes</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <p class="muted small">Requests are saved in this browser only (prototype). A live version would keep them in a shared database.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ PARTNER -->
+<section id="tab-partner" class="tab">
+  <div class="card noprint">
+    <h2>Plan today's round</h2>
+    <div class="controls">
+      <label>People in the team today<input id="pWorkers" type="number" min="1" max="8" value="3"></label>
+      <label>Clothes one person carries per trip<input id="pCap" type="number" min="40" max="150" value="60"></label>
+      <label>Planned shift (minutes)<input id="pShift" type="number" min="60" max="600" value="240"></label>
+      <label>Start walking at<input id="pStart" type="time" value="09:30"></label>
+      <button id="btnPlan" class="primary">Find the best route</button>
+    </div>
+    <p id="planMsg" class="msg"></p>
+  </div>
+  <div id="planOut" class="hidden">
+    <div class="card sheet">
+      <div class="cardhead">
+        <h2>Today's route, in plain words</h2>
+        <button id="btnPrint" class="ghost noprint">Print / save as PDF</button>
+      </div>
+      <p id="sheetLead" class="lead"></p>
+      <div class="rules">
+        <div><b>1.</b> Everyone starts at the <b>van, parked on the road next to D42</b>.</div>
+        <div><b>2.</b> Carry at most <b id="ruleCap">60</b> clothes at a time. Do the trips in the order written below.</div>
+        <div><b>3.</b> Inside each building, visit the floors in the order written below. You never climb the same stairs twice.</div>
+        <div><b>4.</b> If a room is locked, knock, wait a minute, and move on. Mark it "Not in" on your phone.</div>
+        <div><b>5.</b> After each trip, check your phone (Walker mode). It says <b>"go back to the van"</b> or <b>"go straight to your next trip"</b>.</div>
+      </div>
+      <div id="personSheets" class="people"></div>
+    </div>
+    <div class="grid2 wide-left noprint">
+      <div class="card">
+        <div class="cardhead"><h2>Route map</h2>
+          <label class="inline">Show <select id="mapWorker"><option value="all">everyone</option></select></label>
+        </div>
+        <div id="mapWrap" class="mapwrap"></div>
+        <div id="mapLegend" class="legend"></div>
+      </div>
+      <div class="card">
+        <h2>Why this plan?</h2>
+        <p id="recoText" class="muted"></p>
+        <div class="tablewrap"><table id="rankTable" class="data"><thead></thead><tbody></tbody></table></div>
+        <p class="muted small">Each method is tried on today's requests over 150 simulated mornings, with students out at the rates set on the Compare tab.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ WALKER -->
+<section id="tab-walker" class="tab">
+  <div class="card">
+    <h2>Walker mode</h2>
+    <p class="muted">What a team member sees on their phone. Tap <b>In</b> or <b>Not in</b> at each room. After every trip the app looks at what you carry and how many students have been out so far, and tells you whether to walk back to the van or go straight on to your next trip.</p>
+    <div class="controls">
+      <label>I am<select id="wWorker"></select></label>
+      <button id="btnWalkerStart" class="primary">Start my round</button>
+      <button id="btnWalkerAuto" class="ghost">Auto-play a random day</button>
+    </div>
+    <p id="walkerMsg" class="msg"></p>
+  </div>
+  <div id="walkerOut" class="grid2 hidden">
+    <div class="card">
+      <div class="statrow">
+        <div class="stat"><span class="k">Carrying</span><span id="wLoad" class="v">0</span><span class="u">of <span id="wCap">60</span> clothes</span></div>
+        <div class="stat"><span class="k">Time so far</span><span id="wTime" class="v">0</span><span class="u">min</span></div>
+        <div class="stat"><span class="k">Students out today</span><span id="wP" class="v">–</span><span class="u">app's estimate</span></div>
+      </div>
+      <div id="wNow" class="now"></div>
+      <div id="wButtons" class="btnrow"></div>
+    </div>
+    <div class="card">
+      <h2>My log</h2>
+      <ol id="wLog" class="log"></ol>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ ANALYSIS -->
+<section id="tab-analysis" class="tab">
+  <div class="card">
+    <h2>How likely is each kind of day?</h2>
+    <p class="muted">Edit the probabilities and every result below updates. They also set what the app expects about no-shows when it plans and guides the round.</p>
+    <div class="tablewrap"><table id="probTable" class="data"><thead><tr><th>Case</th><th>Day type</th><th class="num">Pickups per day</th><th class="num">Students out</th><th class="num">Probability</th></tr></thead><tbody></tbody></table></div>
+    <p id="probSum" class="msg"></p>
+  </div>
+  <div class="card">
+    <div class="cardhead"><h2>Expected daily cost by method</h2><span id="bestPill" class="pill good"></span></div>
+    <p id="anaLead"></p>
+    <div id="anaChart" class="chart"></div>
+    <div class="tablewrap"><table id="anaTable" class="data"><thead></thead><tbody></tbody></table></div>
+    <p class="muted small" id="anaNote"></p>
+  </div>
+  <div class="card">
+    <h2>Walking minutes per day</h2>
+    <div class="tablewrap"><table id="walkTable" class="data"><thead></thead><tbody></tbody></table></div>
+    <p class="muted small">Team minutes spent walking and on stairs. The percentage is the extra walking against the best method for that kind of day.</p>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h2>How many people should come?</h2>
+      <div class="tablewrap"><table id="wfTable" class="data"><thead></thead><tbody></tbody></table></div>
+      <p id="wfLead" class="muted small"></p>
+    </div>
+    <div class="card">
+      <h2>Check against the exact optimum</h2>
+      <div class="tablewrap"><table id="valTable" class="data"><thead></thead><tbody></tbody></table></div>
+      <p class="muted small" id="valNote"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ LEARN -->
+<section id="tab-learn" class="tab">
+  <div class="card">
+    <h2>How the methods work</h2>
+    <p class="muted">Watch each method plan the same small example: <b>10 pickups</b> (letters A–J) and a van near D42, with up to <b>60 clothes per trip</b>. Press <b>Next</b> to go step by step, or <b>Play</b>.</p>
+    <div class="seg" id="learnPick" role="tablist">
+      <button data-m="DIJ" class="active">0 · Walking distances (Dijkstra)</button>
+      <button data-m="NN">1 · Nearest-neighbour</button>
+      <button data-m="SWEEP">2 · Sweep</button>
+      <button data-m="CW">3 · Clarke–Wright</button>
+      <button data-m="OURS">4 · Our method</button>
+    </div>
+  </div>
+  <div class="grid2 wide-left">
+    <div class="card">
+      <div class="cardhead">
+        <h2 id="learnMapTitle">Example</h2>
+        <span class="inline" id="learnTarget"></span>
+      </div>
+      <div id="learnMap" class="mapwrap"></div>
+      <div class="player">
+        <button id="lReset" class="ghost" title="Start again">⟲ Reset</button>
+        <button id="lPrev" class="ghost">◀ Back</button>
+        <button id="lNext" class="primary">Next ▶</button>
+        <button id="lPlay" class="ghost">▶ Play</button>
+        <span id="lCount" class="small"></span>
+        <button id="lNewEx" class="ghost right">New random example</button>
+      </div>
+      <div id="learnLegend" class="legend"></div>
+    </div>
+    <div class="card">
+      <div class="pill" id="learnSource"></div>
+      <h2 id="learnTitle" style="margin-top:8px"></h2>
+      <ol id="learnHow" class="how"></ol>
+      <div id="learnStep" class="now decision"></div>
+      <div id="learnSide"></div>
+    </div>
+  </div>
+  <div id="learnOurs" class="card hidden">
+    <h2>Inside our method</h2>
+    <div class="grid2">
+      <div>
+        <h3>Step 2: cutting the tour is a shortest-path problem</h3>
+        <p class="small">Dots are the points between pickups on the long tour (0 = nothing collected yet, 10 = all collected). Every grey arc is one trip that fits in an armload, and its length is the minutes that trip takes. The <b>coloured path</b> is the cheapest way from 0 to the end: those arcs are the trips we make.</p>
+        <div id="dagWrap" class="chart"></div>
+      </div>
+      <div>
+        <h3>Step 5: on the day, go back or carry on?</h3>
+        <p class="small">After trip 1, the walker has some clothes in hand. Move the sliders to see what the app decides. The app starts from the case probabilities and updates them after every knock (Bayes' rule).</p>
+        <label>Rooms knocked so far today: <b id="cSeenV"></b><input id="cSeen" type="range" min="0" max="20" value="8"></label>
+        <label>Of those, nobody was in: <b id="cOutV"></b><input id="cOut" type="range" min="0" max="20" value="3"></label>
+        <label>Clothes in hand now: <b id="cLoadV"></b><input id="cLoad" type="range" min="0" max="60" value="25"></label>
+        <div id="calcOut"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>The four methods on our campus</h2>
+    <div class="tablewrap"><table id="learnSummary" class="data"><thead></thead><tbody></tbody></table></div>
+    <p class="small" id="learnSummaryNote"></p>
+  </div>
+</section>
+
+<!-- ============================================================ ABOUT / ASSUMPTIONS -->
+<section id="tab-about" class="tab">
+  <div class="card prose">
+    <h2>Assumptions</h2>
+    <p class="muted">These are the numbers we had to guess, because there was no time for a survey. Facts taken from the campus map (blocks, floors, distances) are not listed here. The Compare tab shows how results change across kinds of day.</p>
+    <div class="tablewrap"><table id="assumpTable" class="data"><thead><tr><th>What</th><th>Value we used</th><th>Why / note</th></tr></thead><tbody></tbody></table></div>
+  </div>
+  <div class="card prose">
+    <h2>How the model works, briefly</h2>
+    <ol>
+      <li><b>Campus.</b> Every block (D19–D43, MSH 1–19) was traced from IIMA's official campus map. The drawing was turned into a flat plan, scaled so the new campus covers its 39 acres. Footpaths link each block to its neighbours, and <b>Dijkstra</b> gives the shortest walk between any two blocks.</li>
+      <li><b>Cost of a trip.</b> No fixed charge per trip. A trip costs its minutes: walking, plus stairs, plus knocking and counting at each room, plus 1 minute to unload at the van. A day costs the team's time: everyone is paid until the last person is back, with 50% extra for overtime.</li>
+      <li><b>Routes.</b> Three methods from class (nearest-neighbour, sweep, Clarke–Wright) and our method. Our method uses a known idea from research, "route first, cut second" (Beasley 1983; Prins 2004): make one long tour, then cut it into armloads with a shortest-path model. We seed it with Clarke–Wright and improve it by moving rooms between trips. Every method finishes with 2-opt, and trips are shared out with the least-utilised-bin rule.</li>
+      <li><b>No-shows (our own addition).</b> On the day, after each trip, the app decides whether to walk back to the van or carry on with what you have. It works out the expected minutes of each choice. The chance a student is out starts from the case probabilities and is updated by Bayes' rule after every knock.</li>
+      <li><b>Choosing.</b> Each method is simulated on the same random days for each kind of day. The case probabilities weight the results, and the lowest expected cost wins.</li>
+    </ol>
+    <p class="muted">Prototype for the OML course project, IIM Ahmedabad.</p>
+  </div>
+</section>
+</main>
+
+<script src="campus.js"></script>
+<script src="engine.js"></script>
+<script src="results.js"></script>
+<script src="app.js"></script>
+<script src="teach.js"></script>
+</body>
+</html>
